@@ -44,7 +44,7 @@ def key_from(auth):
 
 def client(auth):
     k=key_from(auth)
-    if k.startswith("AIza"):
+    if k.startswith(("AIza", "AQ.")):
         return {"provider":"gemini","key":k}
     return OpenAI(api_key=k)
 
