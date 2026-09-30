@@ -1,0 +1,9 @@
+NOVAMIND v5 — COMMAND ENGINE
+
+ABRE INICIAR_NOVAMIND.bat Y DEJA QUE HAGA LA INSTALACION Y EL ARRANQUE AUTOMATICAMENTE.
+
+La unica informacion que debes proporcionar dentro de la app es tu clave API de OpenAI, porque NovaMind no puede conocer ni inventar una clave privada.
+
+Despues usa el boton ⚡ Hazlo o escribe /hazlo.
+
+Prueba: /hazlo Crea un plan para aprender Python en 7 dias con ejercicios y examen final.
