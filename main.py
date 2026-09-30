@@ -4,6 +4,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from openai import OpenAI
+import urllib.request, urllib.parse, urllib.error
 from PIL import Image
 
 BASE=os.path.dirname(os.path.abspath(__file__))
@@ -15,8 +16,9 @@ if not os.path.isdir(STATIC_DIR):
 app=FastAPI(title="NovaMind Mobile v5 — Command Engine")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-ALLOWED={"gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol"}
+ALLOWED={"gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol","gemini-3.7-flash"}
 DEFAULT_MODEL="gpt-5.6-luna"
+GEMINI_MODEL="gemini-3.7-flash"
 SYSTEM="""Eres NovaMind, un asistente orientado a resultados. No te limites a conversar: transforma objetivos en trabajo concreto.
 Usa lenguaje claro. Cuando una tarea sea compleja, divídela internamente en pasos, ejecuta lo que las herramientas disponibles permitan y verifica el resultado.
 Nunca inventes que ejecutaste una acción externa si no existe una herramienta conectada para hacerlo. Si falta una autorización, archivo, cuenta o servicio, dilo y deja el siguiente paso listo.
@@ -40,7 +42,11 @@ def key_from(auth):
     if not k: raise HTTPException(401,"API Key vacía.")
     return k
 
-def client(auth): return OpenAI(api_key=key_from(auth))
+def client(auth):
+    k=key_from(auth)
+    if k.startswith("AIza"):
+        return {"provider":"gemini","key":k}
+    return OpenAI(api_key=k)
 
 def clean_history(history):
     out=[]
@@ -50,6 +56,33 @@ def clean_history(history):
     return out
 
 def response_text(c, model, prompt, history=None, web=False):
+    if isinstance(c,dict) and c.get("provider")=="gemini":
+        # Gemini Developer API: use the free-tier model. Web grounding is intentionally
+        # skipped here because Google documents it as unavailable on the free tier.
+        contents=[]
+        for x in clean_history(history or []):
+            role="model" if x["role"]=="assistant" else "user"
+            contents.append({"role":role,"parts":[{"text":x["content"]}]})
+        contents.append({"role":"user","parts":[{"text":prompt}]})
+        payload={
+            "systemInstruction":{"parts":[{"text":SYSTEM}]},
+            "contents":contents,
+            "generationConfig":{"temperature":0.7}
+        }
+        url="https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":generateContent?"+urllib.parse.urlencode({"key":c["key"]})
+        req=urllib.request.Request(url,data=json.dumps(payload).encode("utf-8"),headers={"Content-Type":"application/json"},method="POST")
+        try:
+            with urllib.request.urlopen(req,timeout=90) as resp:
+                data=json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            detail=e.read().decode("utf-8",errors="replace")
+            raise RuntimeError(f"Gemini API {e.code}: {detail[:500]}")
+        except Exception as e:
+            raise RuntimeError(f"Gemini API: {e}")
+        try:
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception:
+            raise RuntimeError("Gemini no devolvió una respuesta de texto.")
     p={"model":model,"instructions":SYSTEM,"input":(clean_history(history or [])+[ {"role":"user","content":prompt} ])}
     if web: p["tools"]=[{"type":"web_search"}]
     r=c.responses.create(**p)
@@ -141,6 +174,8 @@ Entrega una respuesta final clara, útil y orientada a resultados. Si hay entreg
 @app.post("/api/image")
 def image(body:ChatRequest, authorization:str|None=Header(default=None)):
     c=client(authorization)
+    if isinstance(c,dict) and c.get("provider")=="gemini":
+        raise HTTPException(501,"La ruta gratuita Gemini está habilitada para texto. La generación de imágenes requiere un modelo/servicio con imagen disponible.")
     try:
         r=c.images.generate(model="gpt-image-2",prompt=body.message,size="1024x1024")
         return {"image":"data:image/png;base64,"+r.data[0].b64_json}
