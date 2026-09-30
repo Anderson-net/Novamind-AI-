@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101323">
+<meta name="description" content="NovaMind, tu asistente de IA en el celular.">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<title>NovaMind</title>
+<style>
+:root{--bg:#0b1020;--panel:#141a2d;--line:#28314b;--text:#f5f7ff;--muted:#a6b0c8;--accent:#8b7cff;--user:#39316f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,sans-serif}
+header{position:sticky;top:0;z-index:2;background:#101323ee;backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 12px) 14px 12px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;gap:10px;align-items:center}.logo{width:38px;height:38px;border-radius:13px;background:linear-gradient(135deg,#8b7cff,#4dd6c8);display:grid;place-items:center;font-size:21px}.brand strong{display:block;font-size:17px}.brand small{color:var(--muted);font-size:12px}
+button,select,input,textarea{font:inherit}button{border:0;border-radius:12px;padding:11px 14px;background:var(--accent);color:white;font-weight:650;cursor:pointer}.iconbtn{background:var(--panel);border:1px solid var(--line);padding:10px 12px}
+main{max-width:850px;margin:0 auto;min-height:calc(100dvh - 75px);display:flex;flex-direction:column;padding:14px 12px calc(18px + env(safe-area-inset-bottom))}
+#messages{flex:1;display:flex;flex-direction:column;gap:14px;padding:8px 0 20px}.welcome{margin:auto;text-align:center;max-width:500px;padding:28px 12px}.welcome .big{font-size:42px}.welcome h1{font-size:27px;margin:8px 0}.welcome p{color:var(--muted);line-height:1.5}
+.msg{max-width:92%;padding:13px 15px;border-radius:18px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.user{align-self:flex-end;background:var(--user);border-bottom-right-radius:5px}.assistant{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:5px}.assistant img{max-width:100%;border-radius:12px}
+.composer{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 20%);padding-top:10px}.composebox{display:flex;gap:8px;align-items:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:8px}.composebox textarea{resize:none;max-height:150px;min-height:44px;flex:1;background:transparent;border:0;color:var(--text);outline:none;padding:11px 8px}.send{width:46px;height:46px;border-radius:15px;padding:0;font-size:20px}.subrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 4px;color:var(--muted);font-size:12px}.subrow button{font-size:12px;padding:7px 10px;background:transparent;color:var(--muted);border:1px solid var(--line)}
+.drawer{position:fixed;inset:0;background:#0009;z-index:5;display:none}.drawer.open{display:block}.sheet{position:absolute;right:0;top:0;bottom:0;width:min(92vw,430px);background:var(--panel);padding:calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px);overflow:auto;border-left:1px solid var(--line)}.sheet h2{margin-top:0}.field{display:block;margin:14px 0}.field span{display:block;color:var(--muted);font-size:13px;margin-bottom:7px}.field input,.field select,.field textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#0b1020;color:var(--text)}.row{display:flex;gap:8px}.row>*{flex:1}.hint{color:var(--muted);font-size:12px;line-height:1.5}.historyitem{display:block;width:100%;text-align:left;margin:7px 0;background:#0b1020;border:1px solid var(--line);font-weight:500}.hidden{display:none!important}
+@media(min-width:700px){main{padding-left:24px;padding-right:24px}.msg{max-width:85%}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand"><div class="logo">✦</div><div><strong>NovaMind</strong><small>Command Engine · IA que ejecuta</small></div></div>
+ <button class="iconbtn" id="settingsBtn" aria-label="Ajustes">⚙️</button>
+</header>
+<main>
+ <div id="messages">
+  <div class="welcome" id="welcome"><div class="big">✦</div><h1>¿En qué te ayudo?</h1><p>Dile el resultado que quieres. NovaMind puede planificar, investigar, crear y verificar el trabajo. Pulsa ⚡ Hazlo para el modo de ejecución.</p></div>
+ </div>
+ <div class="composer">
+  <div class="composebox"><textarea id="prompt" rows="1" placeholder="Escribe un mensaje…" enterkeyhint="send"></textarea><button class="send" id="send" aria-label="Enviar">↑</button></div>
+  <div class="subrow"><span id="status">Listo</span><div><button id="newChat">Nuevo chat</button><button id="autoMode">⚡ Hazlo</button><button id="imageMode">Imagen</button><button id="cinemaMode">Cine</button></div></div>
+ </div>
+</main>
+<div class="drawer" id="cinemaDrawer"><div class="sheet">
+<div class="row" style="align-items:center"><h2 style="flex:1">🎬 Cine Nova</h2><button class="iconbtn" id="closeCinema">✕</button></div>
+<p class="hint">Convierte una imagen en un clip con movimiento cinematográfico. No es vídeo generativo: es un efecto de cámara creado localmente.</p>
+<label class="field"><span>Imagen</span><input id="cinemaFile" type="file" accept="image/png,image/jpeg,image/webp"></label>
+<label class="field"><span>Duración: <b id="durVal">6</b>s</span><input id="duration" type="range" min="2" max="15" step="1" value="6"></label>
+<label class="field"><span>Zoom: <b id="zoomVal">1.10</b>x</span><input id="zoom" type="range" min="1" max="1.35" step=".01" value="1.10"></label>
+<label class="field"><span>Movimiento</span><select id="direction"><option value="zoom">Cinemático</option><option value="left">Paneo izquierda</option><option value="right">Paneo derecha</option><option value="up">Paneo arriba</option><option value="down">Paneo abajo</option></select></label>
+<button id="makeCinema" style="width:100%">Crear vídeo MP4</button><p id="cinemaStatus" class="hint"></p>
+</div></div><div class="drawer" id="drawer">
+
+ <div class="sheet">
+  <div class="row" style="align-items:center"><h2 style="flex:1">Ajustes</h2><button class="iconbtn" id="closeSettings">✕</button></div>
+  <label class="field"><span>OpenAI API Key</span><input id="apiKey" type="password" autocomplete="off" placeholder="sk-…"></label>
+  <label class="field"><span>Modelo</span><select id="model"><option value="gpt-5.6-luna">GPT-5.6 Luna · rápido</option><option value="gpt-5.6-terra">GPT-5.6 Terra · equilibrio</option><option value="gpt-5.6-sol">GPT-5.6 Sol · complejo</option></select></label>
+  <label class="field"><span>Dirección del servidor</span><input id="serverUrl" placeholder="https://tu-app.onrender.com"></label>
+  <label class="field"><span><input id="webSearch" type="checkbox" style="width:auto"> Permitir búsqueda web</span></label>
+  <button id="saveSettings" style="width:100%">Guardar ajustes</button>
+  <p class="hint">La clave se guarda solo en el almacenamiento de este navegador y se envía al servidor configurado por HTTPS para cada solicitud. Usa únicamente un servidor tuyo o de confianza. Nunca compartas tu clave. Las respuestas y el historial se guardan en este dispositivo.</p>
+  <hr style="border-color:var(--line);margin:22px 0">
+  <h3>Conversaciones</h3><div id="historyList"></div>
+  <button id="clearHistory" style="width:100%;margin-top:12px;background:#6b3146">Borrar todos los chats</button>
+  <p class="hint">Para instalar: abre esta página en Chrome y usa el menú ⋮ → “Añadir a pantalla de inicio”.</p>
+ </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const KEY='novamind.mobile.v1';
+let state=JSON.parse(localStorage.getItem(KEY)||'{}');
+state.chats ||= []; state.current ||= null; state.settings ||= {};
+const defaults={apiKey:'',model:'gpt-5.6-luna',serverUrl:location.origin,webSearch:false};
+state.settings={...defaults,...state.settings};
+let imageMode=false,busy=false,autoMode=true;
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function active(){let c=state.chats.find(x=>x.id===state.current);if(!c){c={id:crypto.randomUUID(),title:'Nuevo chat',messages:[],updated:Date.now()};state.chats.unshift(c);state.current=c.id;save()}return c}
+function render(){
+ const box=$('messages'), c=active();box.innerHTML='';
+ if(!c.messages.length){box.innerHTML='<div class="welcome"><div class="big">✦</div><h1>¿En qué te ayudo?</h1><p>Pregunta, escribe, idea, planifica o crea. Tus chats se guardan en este dispositivo.</p></div>';return}
+ c.messages.forEach(m=>{const d=document.createElement('div');d.className='msg '+m.role;d.textContent=m.content||'';if(m.image){const im=document.createElement('img');im.src=m.image;d.appendChild(document.createElement('br'));d.appendChild(im)}box.appendChild(d)});window.scrollTo(0,document.body.scrollHeight)
+}
+function status(t){$('status').textContent=t}
+function settingsUI(){ $('apiKey').value=state.settings.apiKey;$('model').value=state.settings.model;$('serverUrl').value=state.settings.serverUrl;$('webSearch').checked=state.settings.webSearch;renderHistory()}
+function renderHistory(){const el=$('historyList');el.innerHTML='';state.chats.forEach(c=>{const b=document.createElement('button');b.className='historyitem';b.textContent=c.title||'Chat';b.onclick=()=>{state.current=c.id;save();render();$('drawer').classList.remove('open')};el.appendChild(b)})}
+async function send(){
+ if(busy)return;const text=$('prompt').value.trim();if(!text)return;
+ if(!state.settings.apiKey){$('drawer').classList.add('open');status('Añade tu API Key en Ajustes');return}
+ if(!state.settings.serverUrl){status('Configura la dirección del servidor');return}
+ const c=active();if(!c.messages.length)c.title=text.slice(0,42);c.messages.push({role:'user',content:text});$('prompt').value='';save();render();busy=true;$('send').disabled=true;status('Pensando…');
+ try{
+  const endpoint=state.settings.serverUrl.replace(/\/+$/,'')+(imageMode?'/api/image':(autoMode?'/api/command':'/api/chat'));
+  const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+state.settings.apiKey},body:JSON.stringify({message:text,history:c.messages.slice(0,-1),model:state.settings.model,web_search:state.settings.webSearch})});
+  const data=await res.json();if(!res.ok)throw new Error(data.detail||'Error del servidor');
+  c.messages.push(imageMode?{role:'assistant',content:'Imagen generada',image:data.image}:{role:'assistant',content:data.reply||'No recibí texto.'});
+  imageMode=false;$('imageMode').textContent='Imagen';save();render();status('Listo');
+ }catch(e){c.messages.push({role:'assistant',content:'No pude completar la solicitud: '+e.message});save();render();status('Error')}
+ finally{busy=false;$('send').disabled=false}
+}
+$('send').onclick=send;$('prompt').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+$('settingsBtn').onclick=()=>{$('drawer').classList.add('open');settingsUI()};$('closeSettings').onclick=()=>$('drawer').classList.remove('open');
+$('saveSettings').onclick=()=>{state.settings={apiKey:$('apiKey').value.trim(),model:$('model').value,serverUrl:$('serverUrl').value.trim()||location.origin,webSearch:$('webSearch').checked};save();$('drawer').classList.remove('open');status('Ajustes guardados')};
+$('newChat').onclick=()=>{state.current=null;active();save();render()};
+$('autoMode').onclick=()=>{autoMode=!autoMode;$('autoMode').textContent=autoMode?'⚡ Hazlo':'💬 Chat';status(autoMode?'Modo ejecución: NovaMind planifica y verifica':'Modo chat: respuesta directa')};
+$('imageMode').onclick=()=>{imageMode=!imageMode;$('imageMode').textContent=imageMode?'Imagen: activada':'Imagen';$('prompt').placeholder=imageMode?'Describe la imagen que quieres crear…':'Escribe un mensaje…';status(imageMode?'Modo imagen activado':'Modo chat')};
+$('clearHistory').onclick=()=>{if(confirm('¿Borrar todos los chats de este dispositivo?')){state.chats=[];state.current=null;active();save();render();renderHistory()}};
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/static/sw.js').catch(()=>{});
+render();
+</script>
+</body></html>
