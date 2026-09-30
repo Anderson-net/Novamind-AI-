@@ -7,8 +7,13 @@ from openai import OpenAI
 from PIL import Image
 
 BASE=os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR=os.path.join(BASE,"static")
+# GitHub/Render may receive the web assets in the repository root instead of /static.
+# Use /static when present; otherwise serve the root so the service can boot.
+if not os.path.isdir(STATIC_DIR):
+    STATIC_DIR=BASE
 app=FastAPI(title="NovaMind Mobile v5 — Command Engine")
-app.mount("/static", StaticFiles(directory=os.path.join(BASE,"static")), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 ALLOWED={"gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol"}
 DEFAULT_MODEL="gpt-5.6-luna"
@@ -54,7 +59,7 @@ def safe_model(model):
     return model if model in ALLOWED else DEFAULT_MODEL
 
 @app.get("/")
-def home(): return FileResponse(os.path.join(BASE,"static","index.html"))
+def home(): return FileResponse(os.path.join(STATIC_DIR,"index.html"))
 
 @app.get("/health")
 def health():
